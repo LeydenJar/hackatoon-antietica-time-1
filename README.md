@@ -9,3 +9,49 @@ Notice that this is a relatively large model and most computers aren't optimized
 ### To run it:
 
 - Just docker compose up ;)
+
+## WhatsApp to ChatML Converter
+
+This repository includes a tool to convert WhatsApp chat history exports to ChatML format for fine-tuning LLMs.
+
+### Installation
+
+There's a single dependency so we can use the cli to easily transform whatsapp exports into data that is suitable to fine tune llm models.
+
+To install it, just run:
+
+```bash
+npm install
+```
+
+We are using node version 20.17.0 If you use nvm just do 'nvm use'. I left an nvmrc file on our repo
+
+### Usage
+
+```bash
+# Using npm script
+npm run convert -- -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are Bruna, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Luan" -a "Bruna"
+
+# Or alternatively
+node whats-app-to-chatml.js -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are Bruna, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Luan" -a "Bruna"
+```
+
+### Command Options
+
+- `-i, --input <file>`: WhatsApp chat history file (required)
+- `-o, --output <file>`: Output file path for ChatML data (required)
+- `-s, --system <message>`: System message to include in each conversation (default: "You are a helpful assistant.")
+- `-u, --user <name>`: Name of the user in the chat (optional, helps identify user messages)
+- `-a, --assistant <name>`: Name of the assistant in the chat (optional, helps identify assistant messages)
+
+If you don't specify user/assistant names, the script will alternate roles based on sender changes.
+
+The script filters out:
+
+- Media messages
+- File attachments
+- Links
+- Edited messages
+- Null messages
+- Single dot messages
+- Deleted messages
