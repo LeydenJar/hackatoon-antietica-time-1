@@ -6,11 +6,19 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Expose the Ollama API port
 EXPOSE 11434
 
-# Create a script to pull the model and start the server
+# Create a directory for the model
+RUN mkdir -p /models/custom-model
+
+# Copy the local model files
+COPY models/custom-model/Modelfile /models/custom-model/
+COPY models/custom-model/unsloth.Q8_0.gguf /models/custom-model/
+
+# Create a script to import the model and start the server
 RUN echo '#!/bin/bash' > /start.sh && \
     echo 'ollama serve &' >> /start.sh && \
     echo 'sleep 5' >> /start.sh && \
-    echo 'ollama pull dolphin-mistral:latest' >> /start.sh && \
+    echo 'cd /models/custom-model && ollama create custom-model -f Modelfile' >> /start.sh && \
+    echo 'echo "Custom model imported successfully!"' >> /start.sh && \
     echo 'wait' >> /start.sh && \
     chmod +x /start.sh
 

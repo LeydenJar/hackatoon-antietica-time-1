@@ -4,8 +4,11 @@
   "description": "Node.js app that calls Ollama container",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "convert": "node whats-app-to-chatml.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
   "type": "commonjs"
 }

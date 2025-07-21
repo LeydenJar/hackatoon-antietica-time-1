@@ -1,0 +1,5 @@
+venv
+.env
+
+raw-input/
+node_modules/

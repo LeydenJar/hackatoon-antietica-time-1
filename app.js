@@ -2,13 +2,13 @@
 
 async function callOllama() {
   try {
-    console.log('Calling Ollama container...');
+    console.log('Calling Ollama container with custom model...');
     
     const response = await fetch("http://ollama:11434/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "dolphin-mistral:latest",
+        model: "custom-model",
         messages: [
           { 
             role: "system", 
