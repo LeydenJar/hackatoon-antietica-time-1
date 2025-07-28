@@ -10,6 +10,10 @@ RUN npm install
 
 # Copy application code
 COPY app.js ./
+COPY public ./public
+
+# Expose port
+EXPOSE 3000
 
 # Run the application
 CMD ["npm", "start"] 
