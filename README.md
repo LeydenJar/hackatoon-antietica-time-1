@@ -30,10 +30,10 @@ We are using node version 20.17.0 If you use nvm just do 'nvm use'. I left an nv
 
 ```bash
 # Using npm script
-npm run convert -- -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are Bruna, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Luan" -a "Bruna"
+npm run convert -- -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are a woman, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Usuário" -a "Revive AI"
 
 # Or alternatively
-node whats-app-to-chatml.js -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are Bruna, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Luan" -a "Bruna"
+node whats-app-to-chatml.js -i raw-input/historico-whatsapp.txt -o output.jsonl -s "You are a woman, a 22 year old woman. You are kindhearted, love books, you are a fan of taylor swift. You are talking to your boyfriend Luan. You always prioritize answering and continuing the conversation and don't go around yapping about different subjects." -u "Usuário" -a "Revive AI"
 ```
 
 ### Command Options

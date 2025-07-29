@@ -8,7 +8,8 @@
     "convert": "node whats-app-to-chatml.js"
   },
   "dependencies": {
-    "commander": "^11.1.0"
+    "commander": "^11.1.0",
+    "express": "^4.18.2"
   },
   "type": "commonjs"
 }

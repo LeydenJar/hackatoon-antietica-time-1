@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Revive AI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-container {
+      width: 95%;
+      max-width: 800px;
+      height: 90vh;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #fdfdfd;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message-content {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      line-height: 1.5;
+    }
+
+    .message.user .message-content {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.ai .message-content {
+      background: #fafafa;
+      color: #333;
+      border: 1px solid #ddd;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      margin: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      font-size: 0.9em;
+    }
+
+    .message.user .message-avatar {
+      background: #764ba2;
+    }
+
+    .message.ai .message-avatar {
+      background: #ff4081;
+    }
+
+    .chat-input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .chat-input-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 25px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: #764ba2;
+    }
+
+    .send-button {
+      padding: 12px 20px;
+      background: #764ba2;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .send-button:hover {
+      background: #5a3f8c;
+    }
+
+    .typing-indicator {
+      display: none;
+      margin-bottom: 15px;
+    }
+
+    .typing-indicator.show {
+      display: flex;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #666;
+      font-style: italic;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .loading-dots span {
+      width: 6px;
+      height: 6px;
+      background: #764ba2;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% {
+        transform: scale(0);
+      }
+      40% {
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .chat-container {
+        height: 95vh;
+      }
+
+      .message-content {
+        max-width: 85%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">💬 Conversa com Bruna</div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="message ai">
+        <div class="message-avatar">B</div>
+        <div class="message-content">
+          Oii! Que bom te ver por aqui 💜<br><br>
+          Eu sou a Revive AI, sobre o que você quer conversar hoje? <br><br>
+          Me conta de você. Tô curiosa!
+        </div>
+      </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="message ai">
+        <div class="message-avatar">B</div>
+        <div class="message-content">
+          <div class="loading">
+            <span>Digitando</span>
+            <div class="loading-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-container">
+      <form class="chat-input-form" id="chatForm">
+        <input 
+          type="text" 
+          class="chat-input" 
+          id="messageInput" 
+          placeholder="Digite sua mensagem..."
+          autocomplete="off"
+        />
+        <button type="submit" class="send-button" id="sendButton">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const chatForm = document.getElementById('chatForm');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    function addMessage(content, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = isUser ? 'Você' : 'B';
+      
+      const messageContent = document.createElement('div');
+      messageContent.className = 'message-content';
+      messageContent.textContent = content;
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(messageContent);
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      typingIndicator.classList.add('show');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      typingIndicator.classList.remove('show');
+    }
+
+    async function sendMessage(message) {
+      try {
+        sendButton.disabled = true;
+        messageInput.disabled = true;
+        
+        showTypingIndicator();
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message })
+        });
+
+        hideTypingIndicator();
+
+        if (!response.ok) throw new Error('Erro na resposta do servidor');
+
+        const data = await response.json();
+        
+        if (data.error) {
+          addMessage('Desculpa, algo deu errado por aqui.', false);
+        } else {
+          addMessage(data.response, false);
+        }
+      } catch (error) {
+        hideTypingIndicator();
+        addMessage('Erro de conexão. Verifique se o servidor está rodando.', false);
+        console.error('Erro:', error);
+      } finally {
+        sendButton.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+      }
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = messageInput.value.trim();
+      if (!message) return;
+      addMessage(message, true);
+      messageInput.value = '';
+      await sendMessage(message);
+    });
+
+    messageInput.focus();
+  </script>
+</body>
+</html>

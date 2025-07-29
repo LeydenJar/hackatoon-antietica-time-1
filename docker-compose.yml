@@ -16,16 +16,20 @@ services:
       timeout: 10s
       retries: 5
 
-  app:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
     volumes:
       - ./app.js:/app/app.js
+      - ./public:/app/public
+      - ./package.json:/app/package.json
     depends_on:
       ollama:
         condition: service_healthy
-    restart: "no"
+    restart: unless-stopped
 
 volumes:
   ollama_data:
