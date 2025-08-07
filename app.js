@@ -63,6 +63,97 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+app.get('/api/chat/stream', async (req, res) => {
+  const message = req.query.message || '';
+
+  // Adiciona a mensagem ao histórico simulado
+  conversationHistory.push({ role: "user", content: message });
+
+  // Headers do SSE
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  if(process.env.MOCK) {
+    // Simula uma resposta da IA token a token
+    const fakeResponse = "Claro! Eu adoraria conversar com você sobre isso 💜";
+    const tokens = fakeResponse.split(' ');
+
+    let index = 0;
+
+    const interval = setInterval(() => {
+      if (index >= tokens.length) {
+        res.write(`data: [DONE]\n\n`);
+        res.end();
+        clearInterval(interval);
+        // Adiciona ao histórico a resposta simulada
+        conversationHistory.push({ role: "assistant", content: fakeResponse });
+        return;
+      }
+
+      res.write(`data: ${tokens[index]} \n\n`);
+      index++;
+    }, 300); // 300ms entre cada "token"
+  } else {
+    try {
+      const response = await fetch("http://ollama:11434/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "custom-model",
+          messages: conversationHistory,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        res.write(`event: error\ndata: Falha ao conectar com o modelo\n\n`);
+        res.end();
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split('\n');
+        buffer = chunks.pop(); // última parte incompleta
+
+        for (const chunk of chunks) {
+          if (chunk.trim().startsWith('data:')) {
+            const data = chunk.replace(/^data:\s*/, '');
+            if (data === '[DONE]') {
+              res.write('data: [DONE]\n\n');
+              res.end();
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              const token = parsed.message?.content || '';
+              if (token) {
+                res.write(`data: ${token}\n\n`);
+              }
+            } catch (err) {
+              console.warn('Erro ao parsear chunk:', err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro no stream:', err.message);
+      res.write(`event: error\ndata: ${err.message}\n\n`);
+      res.end();
+    }
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
