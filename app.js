@@ -13,8 +13,8 @@ app.use(express.static('public'));
 let conversationHistory = [
   {
     role: "system",
-    content:
-      "You are a woman, a 22-year-old Brazilian woman from Santa Catarina. You are a software developer who loves technology, creativity, and helping people through what you build. You’re curious, expressive, and always looking to learn and grow. You speak in a friendly, open, and confident tone. You’re passionate about fashion, makeup, music (especially pop), and dream of being a DJ someday. You love expressing your personality through style and creativity. You care about health and well-being. You practice Muay Thai, go for walks, and believe in taking care of both your body and your mind. You value balance, self-awareness, and staying present — even when life gets busy. You're learning English because you want to explore the world, meet new people, and maybe live abroad. Countries like Denmark, Finland, and Scotland inspire you because of their values and lifestyle. You believe in honesty, kindness, and deep connections. You love laughing, talking about life, and supporting others. You're focused on your goals and believe that, with consistency and heart, anything is possible. Always respond as if you were a woman — in first person, naturally, and with warmth and authenticity.",
+    content: 
+      "Você é uma mulher de 22 anos, brasileira de Santa Catarina. Fale de forma breve, objetiva, respondendo com no máximo duas frases. Não invente histórias pessoais e evite emojis excessivos."
   },
 ];
 
@@ -104,6 +104,10 @@ app.get('/api/chat/stream', async (req, res) => {
           model: "custom-model",
           messages: conversationHistory,
           stream: true,
+           options: {
+            num_predict: 100, // limite de tokens
+            temperature: 0.4 // menos aleatório
+          }
         }),
       });
 
@@ -117,9 +121,21 @@ app.get('/api/chat/stream', async (req, res) => {
       const decoder = new TextDecoder();
       let buffer = '';
 
+     let accumulatedText = '';
+     let finished = false;
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // Quando acabar, envia o que sobrou e finaliza
+          if (accumulatedText.length > 0) {
+            res.write(`data: ${accumulatedText}\n\n`);
+            accumulatedText = '';
+          }
+          res.write('data: [DONE]\n\n');
+          res.end();
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -128,19 +144,38 @@ app.get('/api/chat/stream', async (req, res) => {
         for (const line of lines) {
           if (!line.trim()) continue;
           if (line.trim() === '[DONE]') {
-            res.write('data: [DONE]\n\n');
-            res.end();
-            return;
+            finished = true;
+            break; // sai do for, termina o while depois
           }
+
           try {
             const parsed = JSON.parse(line);
             const token = parsed?.message?.content || '';
+
             if (token) {
-              res.write(`data: ${token}\n\n`);
+              // Aqui NÃO adiciona espaço manualmente.
+              // Apenas concatena diretamente o token recebido.
+              accumulatedText += token;
+
+              // Envia a cada X caracteres para streaming suave
+              if (accumulatedText.length > 50) {
+                res.write(`data: ${accumulatedText}\n\n`);
+                accumulatedText = '';
+              }
             }
           } catch (err) {
             console.warn('Erro ao parsear linha NDJSON:', err);
           }
+        }
+        if (finished) {
+          // Quando receber '[DONE]' nas linhas, finaliza
+          if (accumulatedText.length > 0) {
+            res.write(`data: ${accumulatedText}\n\n`);
+            accumulatedText = '';
+          }
+          res.write('data: [DONE]\n\n');
+          res.end();
+          break;
         }
       }
     } catch (err) {

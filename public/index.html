@@ -344,6 +344,22 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    function corrigirEspacos(texto) {
+      return texto
+        // coloca espaço entre letra minúscula e maiúscula grudadas
+        .replace(/([a-zá-ú])([A-ZÁ-Ú])/g, '$1 $2')
+        // remove múltiplos espaços seguidos
+        .replace(/\s+/g, ' ')
+        // remove espaço antes de pontuação
+        .replace(/\s([,.!?;:])/g, '$1')
+        // remove espaço inicial e final
+        .trim();
+    }
+
+    function formatarMensagem(texto) {
+      return corrigirEspacos(texto).replace(/\n/g, '<br>');
+    }
+
     async function sendMessage(message) {
       sendButton.disabled = true;
       messageInput.disabled = true;
@@ -376,9 +392,9 @@
             if (!assistantMessageContent) {
               assistantMessageContent = addMessage('', false);
             }
-
-            assistantText += event.data;
-            assistantMessageContent.textContent = assistantText;
+            const data = event.data;
+            assistantText += data;
+            assistantMessageContent.innerHTML = formatarMensagem(assistantText);
             chatMessages.scrollTop = chatMessages.scrollHeight;
           }
         };
