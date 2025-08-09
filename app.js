@@ -97,7 +97,7 @@ app.get('/api/chat/stream', async (req, res) => {
     }, 300); // 300ms entre cada "token"
   } else {
     try {
-      const response = await fetch("http://ollama:11434/api/chat", {
+      const response = await fetch("http://localhost:11434/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,27 +122,24 @@ app.get('/api/chat/stream', async (req, res) => {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n');
-        buffer = chunks.pop(); // última parte incompleta
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
 
-        for (const chunk of chunks) {
-          if (chunk.trim().startsWith('data:')) {
-            const data = chunk.replace(/^data:\s*/, '');
-            if (data === '[DONE]') {
-              res.write('data: [DONE]\n\n');
-              res.end();
-              return;
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          if (line.trim() === '[DONE]') {
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+          }
+          try {
+            const parsed = JSON.parse(line);
+            const token = parsed?.message?.content || '';
+            if (token) {
+              res.write(`data: ${token}\n\n`);
             }
-
-            try {
-              const parsed = JSON.parse(data);
-              const token = parsed.message?.content || '';
-              if (token) {
-                res.write(`data: ${token}\n\n`);
-              }
-            } catch (err) {
-              console.warn('Erro ao parsear chunk:', err);
-            }
+          } catch (err) {
+            console.warn('Erro ao parsear linha NDJSON:', err);
           }
         }
       }
