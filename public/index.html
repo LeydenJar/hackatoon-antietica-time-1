@@ -41,6 +41,34 @@
       font-weight: bold;
     }
 
+    .system-prompt-container {
+      padding: 10px 20px;
+      background: #f7f7f7;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .system-prompt-container label {
+      font-size: 0.9em;
+      color: #333;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .system-prompt-container input {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s ease;
+    }
+
+    .system-prompt-container input:focus {
+      border-color: #764ba2;
+    }
+
     .chat-messages {
       flex: 1;
       padding: 20px;
@@ -90,6 +118,7 @@
       font-weight: bold;
       color: white;
       font-size: 0.9em;
+      user-select: none;
     }
 
     .message.user .message-avatar {
@@ -196,15 +225,19 @@
   <div class="chat-container">
     <div class="chat-header">💬 Conversa com Bruna</div>
 
+    <div class="system-prompt-container">
+      <label for="systemPromptInput">Persona (system prompt):</label>
+      <input
+        type="text"
+        id="systemPromptInput"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Persona system prompt"
+      />
+    </div>
+
     <div class="chat-messages" id="chatMessages">
-      <div class="message ai">
-        <div class="message-avatar">B</div>
-        <div class="message-content">
-          Oii! Que bom te ver por aqui 💜<br><br>
-          Eu sou a Revive AI, sobre o que você quer conversar hoje? <br><br>
-          Me conta de você. Tô curiosa!
-        </div>
-      </div>
+      <!-- As mensagens serão inseridas aqui -->
     </div>
 
     <div class="typing-indicator" id="typingIndicator">
@@ -231,6 +264,7 @@
           id="messageInput" 
           placeholder="Digite sua mensagem..."
           autocomplete="off"
+          spellcheck="false"
         />
         <button type="submit" class="send-button" id="sendButton">Enviar</button>
       </form>
@@ -243,24 +277,41 @@
     const sendButton = document.getElementById('sendButton');
     const chatForm = document.getElementById('chatForm');
     const typingIndicator = document.getElementById('typingIndicator');
+    const systemPromptInput = document.getElementById('systemPromptInput');
+
+    const STORAGE_KEY = 'reviveai_chat_history';
+    const STORAGE_SYSTEM_PROMPT = 'reviveai_system_prompt';
+
+    let chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let systemPrompt = localStorage.getItem(STORAGE_SYSTEM_PROMPT) || 
+      'Você é uma mulher de 22 anos, gentil, fã de Taylor Swift, conversando com o namorado Luan.';
+
+    systemPromptInput.value = systemPrompt;
+
+    systemPromptInput.addEventListener('input', (e) => {
+      systemPrompt = e.target.value;
+      localStorage.setItem(STORAGE_SYSTEM_PROMPT, systemPrompt);
+    });
 
     function addMessage(content, isUser = false) {
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
-      
+
       const avatar = document.createElement('div');
       avatar.className = 'message-avatar';
       avatar.textContent = isUser ? 'Você' : 'B';
-      
+
       const messageContent = document.createElement('div');
       messageContent.className = 'message-content';
       messageContent.textContent = content;
-      
+
       messageDiv.appendChild(avatar);
       messageDiv.appendChild(messageContent);
-      
+
       chatMessages.appendChild(messageDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      return messageContent;
     }
 
     function showTypingIndicator() {
@@ -272,40 +323,98 @@
       typingIndicator.classList.remove('show');
     }
 
+    function renderChatHistory() {
+      chatMessages.innerHTML = '';
+
+      const initialMessage = document.createElement('div');
+      initialMessage.className = 'message ai';
+      initialMessage.innerHTML = `
+        <div class="message-avatar">B</div>
+        <div class="message-content">
+          Oii! Que bom te ver por aqui 💜<br><br>
+          Eu sou a Revive AI, sobre o que você quer conversar hoje? <br><br>
+          Me conta de você. Tô curiosa!
+        </div>
+      `;
+      chatMessages.appendChild(initialMessage);
+
+      chatHistory.forEach(({ role, content }) => {
+        addMessage(content, role === 'user');
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function corrigirEspacos(texto) {
+      return texto
+        // coloca espaço entre letra minúscula e maiúscula grudadas
+        .replace(/([a-zá-ú])([A-ZÁ-Ú])/g, '$1 $2')
+        // remove múltiplos espaços seguidos
+        .replace(/\s+/g, ' ')
+        // remove espaço antes de pontuação
+        .replace(/\s([,.!?;:])/g, '$1')
+        // remove espaço inicial e final
+        .trim();
+    }
+
+    function formatarMensagem(texto) {
+      return corrigirEspacos(texto).replace(/\n/g, '<br>');
+    }
+
     async function sendMessage(message) {
+      sendButton.disabled = true;
+      messageInput.disabled = true;
+
+      chatHistory.push({ role: 'user', content: message });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+
+      showTypingIndicator();
+
       try {
-        sendButton.disabled = true;
-        messageInput.disabled = true;
-        
-        showTypingIndicator();
-        
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message })
-        });
+        const evtSource = new EventSource(
+          `/api/chat/stream?message=${encodeURIComponent(message)}&system=${encodeURIComponent(systemPrompt)}`
+        );
 
-        hideTypingIndicator();
+        let assistantMessageContent = null;
+        let assistantText = '';
 
-        if (!response.ok) throw new Error('Erro na resposta do servidor');
+        evtSource.onmessage = (event) => {
+          hideTypingIndicator();
+          if (event.data === '[DONE]') {
+            evtSource.close();
 
-        const data = await response.json();
-        
-        if (data.error) {
-          addMessage('Desculpa, algo deu errado por aqui.', false);
-        } else {
-          addMessage(data.response, false);
-        }
+            chatHistory.push({ role: 'assistant', content: assistantText });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+
+            sendButton.disabled = false;
+            messageInput.disabled = false;
+            messageInput.focus();
+          } else {
+            if (!assistantMessageContent) {
+              assistantMessageContent = addMessage('', false);
+            }
+            const data = event.data;
+            assistantText += data;
+            assistantMessageContent.innerHTML = formatarMensagem(assistantText);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        };
+
+        evtSource.onerror = (err) => {
+          console.error('Erro na conexão SSE:', err);
+          evtSource.close();
+          hideTypingIndicator();
+          assistantMessageContent.textContent = 'Erro na resposta do servidor.';
+          sendButton.disabled = false;
+          messageInput.disabled = false;
+          messageInput.focus();
+        };
       } catch (error) {
         hideTypingIndicator();
-        addMessage('Erro de conexão. Verifique se o servidor está rodando.', false);
-        console.error('Erro:', error);
-      } finally {
+        addMessage('Erro de conexão. Verifique o servidor.', false);
         sendButton.disabled = false;
         messageInput.disabled = false;
         messageInput.focus();
+        console.error(error);
       }
     }
 
@@ -318,7 +427,10 @@
       await sendMessage(message);
     });
 
+    renderChatHistory();
+
     messageInput.focus();
   </script>
 </body>
 </html>
+
