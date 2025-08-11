@@ -26,6 +26,8 @@ services:
       - ./app.js:/app/app.js
       - ./public:/app/public
       - ./package.json:/app/package.json
+    # environment:
+    # - MOCK=true # Uncomment for mock mode
     depends_on:
       ollama:
         condition: service_healthy
