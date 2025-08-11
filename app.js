@@ -97,7 +97,7 @@ app.get('/api/chat/stream', async (req, res) => {
     }, 300); // 300ms entre cada "token"
   } else {
     try {
-      const response = await fetch("http://localhost:11434/api/chat", {
+      const response = await fetch("http://ollama:11434/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,14 +143,25 @@ app.get('/api/chat/stream', async (req, res) => {
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          if (line.trim() === '[DONE]') {
+          if (line.trim() === 'data: [DONE]') {
             finished = true;
             break; // sai do for, termina o while depois
           }
 
           try {
-            const parsed = JSON.parse(line);
-            const token = parsed?.message?.content || '';
+            // Remove o prefixo 'data: ' se existir
+            let jsonLine = line.trim();
+            if (jsonLine.startsWith('data: ')) {
+              jsonLine = jsonLine.substring(6); // Remove 'data: '
+            }
+            
+            // Skip se for uma linha vazia após remover o prefixo
+            if (!jsonLine) continue;
+            
+            const parsed = JSON.parse(jsonLine);
+            
+            // Para o endpoint /v1/chat/completions, o conteúdo está em choices[0].delta.content
+            const token = parsed?.choices?.[0]?.delta?.content || '';
 
             if (token) {
               // Aqui NÃO adiciona espaço manualmente.
@@ -164,7 +175,7 @@ app.get('/api/chat/stream', async (req, res) => {
               }
             }
           } catch (err) {
-            console.warn('Erro ao parsear linha NDJSON:', err);
+            console.warn('Erro ao parsear linha NDJSON:', err, 'Linha:', line);
           }
         }
         if (finished) {
