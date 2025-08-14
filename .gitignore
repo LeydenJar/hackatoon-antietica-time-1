@@ -3,3 +3,6 @@ venv
 
 raw-input/
 node_modules/
+
+separated_conversations.jsonl
+output.jsonl
