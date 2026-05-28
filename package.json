@@ -5,10 +5,12 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "convert": "node whats-app-to-chatml.js"
+    "convert": "node whats-app-to-chatml.js",
+    "separate-threads": "node conversation-thread-separator-openai.js"
   },
   "dependencies": {
     "commander": "^11.1.0",
+    "dotenv": "^17.2.1",
     "express": "^4.18.2"
   },
   "type": "commonjs"
